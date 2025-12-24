@@ -1,0 +1,98 @@
+!pip install tensorflow
+ train_data = train_gen.flow_from_directory(
+    'dataset/train',
+    ...
+)
+ !unzip dataset.zip
+ import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+ IMG_SIZE = 224
+BATCH_SIZE = 16
+
+train_gen = ImageDataGenerator(rescale=1./255)
+train_data = train_gen.flow_from_directory(
+    'dataset/train',
+    target_size=(IMG_SIZE, IMG_SIZE),
+    batch_size=BATCH_SIZE,
+    class_mode='categorical'
+)
+
+test_gen = ImageDataGenerator(rescale=1./255)
+test_data = test_gen.flow_from_directory(
+    'dataset/test',
+    target_size=(IMG_SIZE, IMG_SIZE),
+    batch_size=BATCH_SIZE,
+    class_mode='categorical'
+)
+ model = Sequential([
+    Conv2D(32, (3,3), activation='relu', input_shape=(224,224,3)),
+    MaxPooling2D(2,2),
+
+    Conv2D(64, (3,3), activation='relu'),
+    MaxPooling2D(2,2),
+
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dense(train_data.num_classes, activation='softmax')
+])
+ model.compile(
+    optimizer='adam',
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+model.summary()
+model.fit(
+    train_data,
+    epochs=10,
+    validation_data=test_data
+)
+model.save("space_cnn_model.h5")
+print(train_data.class_indices)
+ import numpy as np
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.models import load_model
+
+# 🔹 Load trained model
+model = load_model("space_cnn_model.h5")
+
+# 🔹 Load new image (change file name to your uploaded image)
+img = image.load_img("satellite_test.jpg", target_size=(224,224))
+img = image.img_to_array(img)
+img = img / 255.0
+img = np.expand_dims(img, axis=0)
+
+# 🔹 Predict
+prediction = model.predict(img)
+class_index = np.argmax(prediction)
+
+# 🔹 Print class index
+print("Class index:", class_index)
+
+# 🔹 Map index to class name
+class_labels = {v:k for k,v in train_data.class_indices.items()}
+print("Predicted class:", class_labels[class_index])
+[2:23 am, 24/12/2025] Tejaa: img = image.load_img("satellite_test.jpg", target_size=(224,224))
+[2:49 am, 24/12/2025] Tejaa: import matplotlib.pyplot as plt
+from tensorflow.keras.preprocessing import image
+import numpy as np
+
+# Load image
+img_path = "satellite_test.jpg"
+img = image.load_img(img_path, target_size=(224,224))
+plt.imshow(img)
+plt.axis('off')
+plt.show()
+
+# Prepare for prediction
+img_array = image.img_to_array(img)/255.0
+img_array = np.expand_dims(img_array, axis=0)
+
+# Predict
+prediction = model.predict(img_array)
+class_index = np.argmax(prediction)
+class_labels = {v:k for k,v in train_data.class_indices.items()}
+
+print("Predicted class:", class_labels[class_index])

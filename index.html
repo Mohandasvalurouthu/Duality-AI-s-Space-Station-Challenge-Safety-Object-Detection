@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Object Detection</title>
+
+  <!-- TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
+  <!-- COCO-SSD Model -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 900px;
+      background: #020617;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.6);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    input[type="file"] {
+      display: block;
+      margin: 10px auto;
+    }
+
+    canvas {
+      display: block;
+      margin: 15px auto;
+      border: 1px solid #334155;
+      max-width: 100%;
+    }
+
+    .status {
+      text-align: center;
+      margin-top: 10px;
+      color: #38bdf8;
+    }
+
+    .results {
+      margin-top: 15px;
+      background: #020617;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .results ul {
+      padding-left: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Image Object Detection</h1>
+
+    <input type="file" id="imageUpload" accept="image/*" />
+
+    <canvas id="canvas"></canvas>
+
+    <div class="status" id="status">Load an image to detect objects</div>
+
+    <div class="results" id="results"></div>
+  </div>
+
+  <script>
+    const imageUpload = document.getElementById('imageUpload');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const statusText = document.getElementById('status');
+    const resultsDiv = document.getElementById('results');
+
+    let model;
+
+    // Load model
+    async function loadModel() {
+      statusText.innerText = 'Loading model...';
+      model = await cocoSsd.load();
+      statusText.innerText = 'Model loaded. Upload an image.';
+    }
+
+    loadModel();
+
+    imageUpload.addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+
+      img.onload = async () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        statusText.innerText = 'Detecting objects...';
+        resultsDiv.innerHTML = '';
+
+        const predictions = await model.detect(img);
+
+        drawPredictions(predictions);
+        showResults(predictions);
+
+        statusText.innerText = 'Detection complete';
+      };
+    });
+
+    function drawPredictions(predictions) {
+      ctx.lineWidth = 2;
+      ctx.font = '16px Arial';
+
+      predictions.forEach(prediction => {
+        const [x, y, width, height] = prediction.bbox;
+        ctx.strokeStyle = '#22c55e';
+        ctx.strokeRect(x, y, width, height);
+
+        ctx.fillStyle = '#22c55e';
+        const text = `${prediction.class} (${Math.round(prediction.score * 100)}%)`;
+        ctx.fillText(text, x, y > 10 ? y - 5 : 10);
+      });
+    }
+
+    function showResults(predictions) {
+      if (predictions.length === 0) {
+        resultsDiv.innerHTML = '<p>No objects detected.</p>';
+        return;
+      }
+
+      let html = '<h3>Detected Objects</h3><ul>';
+      predictions.forEach(p => {
+        html += `<li>${p.class} - ${(p.score * 100).toFixed(2)}%</li>`;
+      });
+      html += '</ul>';
+
+      resultsDiv.innerHTML = html;
+    }
+  </script>
+
+</body>
+</html>
